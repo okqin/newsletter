@@ -1,11 +1,7 @@
-use newsletter::{configuration, startup};
+use newsletter::{get_configuration, HttpServer};
 
 #[tokio::main]
-async fn main() {
-    let cfg = configuration::get_configuration().expect("Failed to read config");
-    let addr = format!("0.0.0.0:{}", cfg.server_port);
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .expect("Failed to bind address");
-    startup::run(listener).await
+async fn main() -> anyhow::Result<()> {
+    let conf = get_configuration().expect("Failed to read config");
+    HttpServer::new(conf).await?.serve().await
 }

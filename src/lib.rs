@@ -1,3 +1,5 @@
 pub mod configuration;
-pub mod routes;
-pub mod startup;
+pub mod http;
+
+pub use configuration::get_configuration;
+pub use http::HttpServer;
