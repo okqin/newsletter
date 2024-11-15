@@ -8,3 +8,14 @@ port = 5432
 username = "app"
 password = "secret"
 database_name = "newsletter"
+
+[logs]
+# The directive syntax is similar to that of env_logger’s.
+# At a high level, the syntax for directives consists of several parts:
+# "target[span{field=value}]=level"
+# If not configured, the default is to log all info level messages.
+directives = "info"
+
+# The path to the log file.
+# if not configured, logging to file is disabled.
+#path = "/tmp"

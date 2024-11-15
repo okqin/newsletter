@@ -1,7 +1,8 @@
-use newsletter::{get_configuration, HttpServer};
+use newsletter::{telemetry::setup_tracing, HttpServer, Settings};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let conf = get_configuration().expect("Failed to read config");
-    HttpServer::new(conf).await?.serve().await
+    let conf = Settings::try_load().expect("Failed to read config");
+    setup_tracing(conf.logs.as_ref());
+    HttpServer::try_new(&conf).await?.serve().await
 }

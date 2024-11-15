@@ -1,5 +1,6 @@
-pub mod configuration;
-pub mod http;
+mod http;
 
-pub use configuration::get_configuration;
+pub mod configuration;
+pub mod telemetry;
+pub use configuration::Settings;
 pub use http::HttpServer;

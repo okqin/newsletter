@@ -1,33 +1,54 @@
 use anyhow::Context;
-use axum::Router;
-use sqlx::PgPool;
+use axum::{http::header, Router};
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower::ServiceBuilder;
 
 mod error;
 mod health_check;
+mod middleware;
 mod subscriptions;
 
 use crate::configuration::Settings;
 
-pub use self::error::Error;
+pub use self::error::ApiError;
 
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = ApiError> = std::result::Result<T, E>;
+
+pub type DbPool = sqlx::PgPool;
 
 #[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct AppState {
     pub config: Arc<Settings>,
-    pub db: PgPool,
+    pub db: DbPool,
 }
 
-fn app(conf: Settings) -> Router {
+fn router(conf: &Settings) -> Router {
     let db = conf.database.get_connection_pool();
-    let config = Arc::new(conf);
+    let config = Arc::new(conf.clone());
     let app_state = AppState { config, db };
+
+    let sensitive_headers = Arc::new([
+        header::AUTHORIZATION,
+        header::PROXY_AUTHORIZATION,
+        header::COOKIE,
+        header::SET_COOKIE,
+    ]);
+
+    let middleware = ServiceBuilder::new()
+        .layer(middleware::set_x_request_id())
+        .layer(middleware::sensitive_request_headers(
+            sensitive_headers.clone(),
+        ))
+        .layer(middleware::trace_layer())
+        .layer(middleware::sensitive_response_headers(sensitive_headers))
+        .layer(middleware::propagate_x_request_id());
+
     Router::new()
         .merge(health_check::router())
         .merge(subscriptions::router())
+        .layer(middleware)
         .with_state(app_state)
 }
 
@@ -41,13 +62,13 @@ pub struct HttpServer {
 
 impl HttpServer {
     /// Initialize the Listener and Router, and then start the service through the serve method.
-    pub async fn new(conf: Settings) -> anyhow::Result<Self> {
+    pub async fn try_new(conf: &Settings) -> anyhow::Result<Self> {
         let addr = conf.server.address_string();
         let listener = TcpListener::bind(addr)
             .await
             .context("Failed to bind address")?;
         let port = listener.local_addr().unwrap().port();
-        let service = app(conf);
+        let service = router(conf);
         Ok(Self {
             listener,
             port,

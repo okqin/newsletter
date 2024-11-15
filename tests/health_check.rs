@@ -1,4 +1,4 @@
-use newsletter::{configuration::DatabaseSettings, get_configuration, HttpServer};
+use newsletter::{configuration::DatabaseSettings, HttpServer, Settings};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 
@@ -10,7 +10,7 @@ pub struct TestApp {
 pub async fn spawn_app() -> TestApp {
     // Randomize configuration to ensure test isolation
     let conf = {
-        let mut c = get_configuration().expect("Failed to read config");
+        let mut c = Settings::try_load().expect("Failed to read config");
         // Use a random OS port
         c.server.port = 0;
         // Use a different database for each test case
@@ -22,7 +22,7 @@ pub async fn spawn_app() -> TestApp {
     let create_database_settings = DatabaseSettings {
         database_name: "postgres".to_string(),
         username: "postgres".to_string(),
-        password: "password".to_string(),
+        password: "password".into(),
         ..conf.database.clone()
     };
     let mut connection = PgConnection::connect(&create_database_settings.connection_string())
@@ -36,7 +36,7 @@ pub async fn spawn_app() -> TestApp {
     // Migrate database
     conf.database.migrate_database().await.unwrap();
 
-    let app = HttpServer::new(conf.clone()).await.unwrap();
+    let app = HttpServer::try_new(&conf).await.unwrap();
     let app_port = app.port();
     tokio::spawn(app.serve());
     TestApp {

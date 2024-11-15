@@ -1,31 +1,23 @@
 use axum::{
-    extract::rejection::FormRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use serde::Serialize;
 use thiserror::Error;
+use tracing::{instrument, warn};
 
 /// Custom error type for the API.
 /// The `#[from]` attribute allows for easy conversion from other error types.
 #[derive(Error, Debug)]
-pub enum Error {
-    /// Converts from an Axum built-in extractor error.
-    #[error("Invalid payload")]
-    InvalidFormBody(#[from] FormRejection),
-
-    /// For errors that occur during manual validation.
-    #[error("Invalid request: {0}")]
-    InvalidRequest(String),
-
+pub enum ApiError {
     /// Converts from `sqlx::Error`.
-    #[error("A database error has occurred")]
-    DatabaseError(#[from] sqlx::Error),
+    #[error("a database error has occurred")]
+    Database(#[from] sqlx::Error),
 
     /// Converts from any `anyhow::Error`.
-    #[error("An internal server error has occurred")]
-    InternalError(#[from] anyhow::Error),
+    #[error("an internal server error has occurred")]
+    Internal(#[from] anyhow::Error),
 }
 
 // Provide detailed error messages as needed
@@ -37,32 +29,38 @@ struct ErrorResponse {
     errors: Option<String>,
 }
 
-impl Error {
+impl ApiError {
     // Determine the appropriate status code.
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::InvalidFormBody(e) => e.status(),
-            Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
-            Self::InternalError(_) | Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Internal(_) | Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    // Get the wrapped error message inside ApiError
+    fn inner_error(&self) -> String {
+        match self {
+            Self::Internal(e) => format!("internal error: {}", e),
+            Self::Database(e) => format!("database error: {}", e),
         }
     }
 }
 
 // The IntoResponse implementation for Api Error
 // Create a generic response to hide specific implementation details.
-impl IntoResponse for Error {
+impl IntoResponse for ApiError {
+    #[instrument(skip_all)]
     fn into_response(self) -> Response {
         let status_code = self.status_code();
 
-        let errors = match &self {
-            Self::InvalidFormBody(errors) => Some(errors.body_text()),
-            _ => None,
-        };
-
         let body = ErrorResponse {
             message: self.to_string(),
-            errors,
+            errors: None,
         };
+
+        let error_log = self.inner_error();
+        warn!(error_log);
+
         (status_code, Json(body)).into_response()
     }
 }
