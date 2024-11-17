@@ -10,7 +10,7 @@ pub struct TestApp {
 pub async fn spawn_app() -> TestApp {
     // Randomize configuration to ensure test isolation
     let conf = {
-        let mut c = Settings::try_load().expect("Failed to read config");
+        let mut c = Settings::try_load(None).expect("Failed to read config");
         // Use a random OS port
         c.server.port = 0;
         // Use a different database for each test case

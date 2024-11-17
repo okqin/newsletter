@@ -6,7 +6,6 @@ in
 pkgs.mkShellNoCC {
   packages = with pkgs; [
     postgresql
-    pgcli
   ];
 
   shellHook = ''

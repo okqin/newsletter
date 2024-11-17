@@ -40,23 +40,16 @@ pub struct LogsSettings {
 }
 
 impl Settings {
-    pub fn try_load() -> Result<Self, ConfigError> {
+    pub fn try_load(conf_file: Option<String>) -> Result<Self, ConfigError> {
+        let conf_file = conf_file.unwrap_or("./config.toml".to_string());
+
         // init config reader
         let settings = Config::builder()
-            .add_source(File::with_name("config.toml"))
+            .add_source(File::with_name(&conf_file))
             .build()?;
         // try deserialize to Settings struct
         settings.try_deserialize::<Settings>()
     }
-}
-
-pub fn get_configuration() -> Result<Settings, ConfigError> {
-    // init config reader
-    let settings = Config::builder()
-        .add_source(File::with_name("config.toml"))
-        .build()?;
-    // try deserialize to Settings struct
-    settings.try_deserialize::<Settings>()
 }
 
 impl DatabaseSettings {
