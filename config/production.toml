@@ -1,13 +1,9 @@
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8000
 
 [database]
-host = "127.0.0.1"
-port = 5432
-username = "app"
-password = "secret"
-database_name = "newsletter"
+require_ssl = true
 
 [logs]
 # The directive syntax is similar to that of env_logger’s.
