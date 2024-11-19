@@ -57,12 +57,12 @@ impl Settings {
         let settings = Config::builder()
             .add_source(File::from(config_dir.join("base.toml")))
             .add_source(File::from(config_dir.join(config_file)))
-            // Add in settings from environment variables (with a prefix of APP and '.' as separator)
-            // E.g. `APP_SERVER.PORT=8000 would set `Settings.server.port`
+            // Add in settings from environment variables (with a prefix of APP and '_' as separator)
+            // E.g. `APP.SERVER_PORT=8000 would set `Settings.server.port`
             .add_source(
                 config::Environment::with_prefix("APP")
-                    .prefix_separator("_")
-                    .separator("."),
+                    .prefix_separator(".")
+                    .separator("_"),
             )
             .build()?;
         // try deserialize to Settings struct

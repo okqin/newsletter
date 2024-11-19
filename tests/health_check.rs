@@ -21,8 +21,6 @@ pub async fn spawn_app() -> TestApp {
     // Create database
     let create_database_settings = DatabaseSettings {
         database_name: "postgres".to_string(),
-        username: "postgres".to_string(),
-        password: "password".into(),
         ..conf.database.clone()
     };
     let mut connection = PgConnection::connect(&create_database_settings.connection_string())

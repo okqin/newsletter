@@ -23,7 +23,8 @@ env:
   CARGO_TERM_COLOR: always
   SQLX_VERSION: 0.8.2
   SQLX_FEATURES: "rustls,postgres"
-  DATABASE_URL: postgres://postgres:password@localhost:5432/postgres
+  APP.DATABASE_USERNAME: postgres
+  APP.DATABASE_PASSWORD: password
 
 jobs:
   test:
@@ -66,9 +67,6 @@ jobs:
           --features ${{ env.SQLX_FEATURES }}
           --no-default-features
           --locked
-
-      - name: Migrate database
-        run: sqlx database create && sqlx migrate run
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest
