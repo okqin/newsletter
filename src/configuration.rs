@@ -30,7 +30,7 @@ pub struct DatabaseSettings {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
-    pub database_name: String,
+    pub db_name: String,
     pub require_ssl: bool,
 }
 
@@ -57,12 +57,12 @@ impl Settings {
         let settings = Config::builder()
             .add_source(File::from(config_dir.join("base.toml")))
             .add_source(File::from(config_dir.join(config_file)))
-            // Add in settings from environment variables (with a prefix of APP and '_' as separator)
-            // E.g. `APP.SERVER_PORT=8000 would set `Settings.server.port`
+            // Add in settings from environment variables (with a prefix of APP and '.' as separator)
+            // E.g. `APP.SERVER.PORT=8000 would set `Settings.server.port`
             .add_source(
                 config::Environment::with_prefix("APP")
                     .prefix_separator(".")
-                    .separator("_"),
+                    .separator("."),
             )
             .build()?;
         // try deserialize to Settings struct
@@ -78,7 +78,7 @@ impl DatabaseSettings {
             self.password.expose_secret(),
             self.host,
             self.port,
-            self.database_name,
+            self.db_name,
         )
     }
 
@@ -95,7 +95,7 @@ impl DatabaseSettings {
             .username(&self.username)
             .password(self.password.expose_secret())
             .port(self.port)
-            .database(&self.database_name)
+            .database(&self.db_name)
             .ssl_mode(ssl_mode)
     }
 

@@ -2,7 +2,7 @@
 **/.gitignore
 **/.vs
 **/.vscode
-docker-compose*
+compose*
 Dockerfile*
 LICENSE
 README.md

@@ -14,20 +14,20 @@ pub async fn spawn_app() -> TestApp {
         // Use a random OS port
         c.server.port = 0;
         // Use a different database for each test case
-        c.database.database_name = Uuid::new_v4().to_string();
+        c.database.db_name = Uuid::new_v4().to_string();
         c
     };
 
     // Create database
     let create_database_settings = DatabaseSettings {
-        database_name: "postgres".to_string(),
+        db_name: "postgres".to_string(),
         ..conf.database.clone()
     };
     let mut connection = PgConnection::connect(&create_database_settings.connection_string())
         .await
         .expect("Failed to connect to Postgres");
     connection
-        .execute(format!(r#"CREATE DATABASE "{}";"#, conf.database.database_name).as_ref())
+        .execute(format!(r#"CREATE DATABASE "{}";"#, conf.database.db_name).as_ref())
         .await
         .expect("Failed to create database");
 

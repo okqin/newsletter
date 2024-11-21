@@ -23,8 +23,8 @@ env:
   CARGO_TERM_COLOR: always
   SQLX_VERSION: 0.8.2
   SQLX_FEATURES: "rustls,postgres"
-  APP.DATABASE_USERNAME: postgres
-  APP.DATABASE_PASSWORD: password
+  APP.DATABASE.USERNAME: postgres
+  APP.DATABASE.PASSWORD: password
 
 jobs:
   test:
