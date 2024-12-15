@@ -27,7 +27,7 @@ impl AsRef<str> for SubscriberEmail {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claim::assert_err;
+    use claims::assert_err;
 
     #[test]
     fn empty_string_is_rejected() {
