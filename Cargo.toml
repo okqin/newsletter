@@ -29,7 +29,7 @@ sqlx = { version = "0.8.2", features = [
     "uuid",
     "chrono",
 ] }
-thiserror = "2.0.6"
+thiserror = "2.0.7"
 tokio = { version = "1.42.0", features = [
     "macros",
     "rt-multi-thread",
@@ -42,7 +42,10 @@ tracing = "0.1.41"
 tracing-appender = "0.2.3"
 tracing-bunyan-formatter = "0.3.10"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+unicode-segmentation = "1.12.0"
 uuid = { version = "1.11.0", features = ["v4"] }
+validator = "0.19.0"
 
 [dev-dependencies]
+claim = "0.5.0"
 reqwest = { version = "0.12.9", features = ["json"] }

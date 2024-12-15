@@ -18,6 +18,10 @@ pub enum ApiError {
     /// Converts from any `anyhow::Error`.
     #[error("an internal server error has occurred")]
     Internal(#[from] anyhow::Error),
+
+    /// Invalid value error.
+    #[error("invalid value: {0}")]
+    InvalidValue(String),
 }
 
 // Provide detailed error messages as needed
@@ -34,6 +38,7 @@ impl ApiError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::Internal(_) | Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InvalidValue(_) => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -42,6 +47,7 @@ impl ApiError {
         match self {
             Self::Internal(e) => format!("internal error: {}", e),
             Self::Database(e) => format!("database error: {}", e),
+            Self::InvalidValue(e) => format!("invalid value: {}", e),
         }
     }
 }
