@@ -11,7 +11,7 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
-use crate::http::{AppState, DbPool, Result};
+use crate::http::{ApiError, AppState, DbPool, Result};
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/subscriptions", post(subscribe))
@@ -27,11 +27,11 @@ struct FormData {
 async fn subscribe(State(state): State<AppState>, Form(data): Form<FormData>) -> Response {
     let name = match SubscriberName::parse(data.name) {
         Ok(name) => name,
-        Err(e) => return e.into_response(),
+        Err(e) => return ApiError::InvalidValue(e).into_response(),
     };
     let email = match SubscriberEmail::parse(data.email) {
         Ok(email) => email,
-        Err(e) => return e.into_response(),
+        Err(e) => return ApiError::InvalidValue(e).into_response(),
     };
     let new_subscriber = NewSubscriber { email, name };
     match insert_subscriber(&state.db, &new_subscriber).await {

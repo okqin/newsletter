@@ -1,13 +1,11 @@
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::http::{ApiError, Result};
-
 #[derive(Debug)]
 pub struct SubscriberName(String);
 
 impl SubscriberName {
     /// Parse a string into a valid `SubscriberName`.
-    pub fn parse(s: String) -> Result<SubscriberName> {
+    pub fn parse(s: String) -> Result<SubscriberName, String> {
         let is_empty_or_whitespace = s.trim().is_empty();
 
         let is_too_long = s.graphemes(true).count() > 256;
@@ -16,9 +14,7 @@ impl SubscriberName {
         let contains_forbidden_characters = s.chars().any(|c| forbidden_characters.contains(&c));
 
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
-            Err(ApiError::InvalidValue(
-                "invalid subscriber name".to_string(),
-            ))
+            Err("invalid subscriber name".to_string())
         } else {
             Ok(SubscriberName(s))
         }

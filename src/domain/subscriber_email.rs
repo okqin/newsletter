@@ -1,19 +1,15 @@
 use validator::ValidateEmail;
 
-use crate::http::{ApiError, Result};
-
 #[derive(Debug)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
     /// Parse a string into a valid `SubscriberEmail`.
-    pub fn parse(s: String) -> Result<SubscriberEmail> {
+    pub fn parse(s: String) -> Result<SubscriberEmail, String> {
         if s.validate_email() {
             Ok(Self(s))
         } else {
-            Err(ApiError::InvalidValue(
-                "invalid subscriber email".to_string(),
-            ))
+            Err("invalid subscriber email".to_string())
         }
     }
 }
