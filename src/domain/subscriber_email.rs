@@ -23,7 +23,24 @@ impl AsRef<str> for SubscriberEmail {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claims::assert_err;
+    use claims::{assert_err, assert_ok};
+    use fake::faker::internet::en::SafeEmail;
+    use fake::Fake;
+    use proptest::arbitrary::any;
+    use proptest::proptest;
+    use proptest::strategy::Strategy;
+
+    fn fake_email_strategy() -> impl Strategy<Value = String> {
+        any::<u32>().prop_map(|_| SafeEmail().fake())
+    }
+
+    proptest!(
+        #[test]
+        fn valid_emails_are_parsed_successfully(email in fake_email_strategy()) {
+            dbg!(&email);
+            assert_ok!(SubscriberEmail::parse(email));
+        }
+    );
 
     #[test]
     fn empty_string_is_rejected() {
