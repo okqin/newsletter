@@ -25,15 +25,10 @@ struct FormData {
 
 #[instrument(skip_all, fields(subscriber_email = data.email, subscriber_name = data.name))]
 async fn subscribe(State(state): State<AppState>, Form(data): Form<FormData>) -> Response {
-    let name = match SubscriberName::parse(data.name) {
-        Ok(name) => name,
+    let new_subscriber = match data.try_into() {
+        Ok(subscriber) => subscriber,
         Err(e) => return ApiError::InvalidValue(e).into_response(),
     };
-    let email = match SubscriberEmail::parse(data.email) {
-        Ok(email) => email,
-        Err(e) => return ApiError::InvalidValue(e).into_response(),
-    };
-    let new_subscriber = NewSubscriber { email, name };
     match insert_subscriber(&state.db, &new_subscriber).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(e) => e.into_response(),
@@ -52,4 +47,14 @@ async fn insert_subscriber(pool: &DbPool, new_subscriber: &NewSubscriber) -> Res
     .execute(pool)
     .await?;
     Ok(())
+}
+
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, String> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(NewSubscriber { email, name })
+    }
 }
