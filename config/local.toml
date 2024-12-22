@@ -7,7 +7,7 @@ host = "127.0.0.1"
 port = 5432
 username = "app"
 password = "secret"
-database_name = "newsletter"
+db_name = "newsletter"
 require_ssl = false
 
 [logs]
