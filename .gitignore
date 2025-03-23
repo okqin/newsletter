@@ -1,3 +1,5 @@
 /target
 .env
 .script/
+/config/local.toml
+/config/production.toml

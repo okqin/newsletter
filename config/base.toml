@@ -20,3 +20,8 @@ directives = "info"
 # The path to the log file.
 # if not configured, logging to file is disabled.
 #path = "/tmp"
+
+[email_client]
+base_url = "https://api.postmarkapp.com"
+sender_email = "chin@jiqin.org"
+authorization_token = "secret"

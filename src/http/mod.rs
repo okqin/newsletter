@@ -10,6 +10,7 @@ mod middleware;
 mod subscriptions;
 
 use crate::configuration::Settings;
+use crate::email_client::EmailClient;
 
 pub use self::error::ApiError;
 
@@ -22,12 +23,27 @@ pub type DbPool = sqlx::PgPool;
 pub(crate) struct AppState {
     pub config: Arc<Settings>,
     pub db: DbPool,
+    pub email_client: Arc<EmailClient>,
 }
 
 fn router(conf: &Settings) -> Router {
     let db = conf.database.get_connection_pool();
     let config = Arc::new(conf.clone());
-    let app_state = AppState { config, db };
+    let sender_email = conf
+        .email_client
+        .sender()
+        .expect("Invalid sender email address");
+    let email_client = EmailClient::new(
+        &conf.email_client.base_url,
+        sender_email,
+        conf.email_client.authorization_token.clone(),
+    );
+    let email_client = Arc::new(email_client);
+    let app_state = AppState {
+        config,
+        db,
+        email_client,
+    };
 
     let sensitive_headers = Arc::new([
         header::AUTHORIZATION,

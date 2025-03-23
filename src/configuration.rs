@@ -9,11 +9,14 @@ use sqlx::{
 };
 use std::{path::PathBuf, time::Duration};
 
+use crate::domain::SubscriberEmail;
+
 #[derive(Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub server: ServerSettings,
     pub logs: Option<LogsSettings>,
+    pub email_client: EmailClientSettings,
 }
 
 #[derive(Deserialize, Clone)]
@@ -40,6 +43,13 @@ pub struct LogsSettings {
     pub directives: Option<String>,
 }
 
+#[derive(Deserialize, Clone)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    pub sender_email: String,
+    pub authorization_token: SecretString,
+}
+
 impl Settings {
     pub fn try_load() -> Result<Self, ConfigError> {
         let base_path = std::env::current_dir().expect("Failed to get current directory");
@@ -48,7 +58,7 @@ impl Settings {
         // Detect the running environment.
         // Default to `local` if unspecified.
         let environment: Environment = std::env::var("APP_ENVIRONMENT")
-            .unwrap_or_else(|_| "local".into())
+            .unwrap_or_else(|_| "dev".into())
             .try_into()
             .expect("Failed to parse APP_ENVIRONMENT.");
         let config_file = format!("{}.toml", environment.as_str());
@@ -125,16 +135,22 @@ impl ServerSettings {
     }
 }
 
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::parse(self.sender_email.clone())
+    }
+}
+
 /// The possible runtime environment for our application.
 pub enum Environment {
-    Local,
+    Dev,
     Production,
 }
 
 impl Environment {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Local => "local",
+            Self::Dev => "dev",
             Self::Production => "production",
         }
     }
@@ -145,7 +161,7 @@ impl TryFrom<String> for Environment {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.to_lowercase().as_str() {
-            "local" => Ok(Self::Local),
+            "dev" => Ok(Self::Dev),
             "production" => Ok(Self::Production),
             other => Err(format!(
                 "{} is not a supported environment. Use either `local` or `production`.",

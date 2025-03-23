@@ -15,7 +15,7 @@ require_ssl = false
 # At a high level, the syntax for directives consists of several parts:
 # "target[span{field=value}]=level"
 # If not configured, the default is to log all info level messages.
-directives = "info"
+directives = "debug"
 
 # The path to the log file.
 # if not configured, logging to file is disabled.
