@@ -37,6 +37,7 @@ fn router(conf: &Settings) -> Router {
         &conf.email_client.base_url,
         sender_email,
         conf.email_client.authorization_token.clone(),
+        conf.email_client.timeout(),
     );
     let email_client = Arc::new(email_client);
     let app_state = AppState {

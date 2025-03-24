@@ -25,3 +25,4 @@ directives = "info"
 base_url = "https://api.postmarkapp.com"
 sender_email = "chin@jiqin.org"
 authorization_token = "secret"
+timeout_millis = 2000

@@ -48,6 +48,7 @@ pub struct EmailClientSettings {
     pub base_url: String,
     pub sender_email: String,
     pub authorization_token: SecretString,
+    pub timeout_millis: u64,
 }
 
 impl Settings {
@@ -138,6 +139,10 @@ impl ServerSettings {
 impl EmailClientSettings {
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::parse(self.sender_email.clone())
+    }
+
+    pub fn timeout(&self) -> Duration {
+        Duration::from_millis(self.timeout_millis)
     }
 }
 
