@@ -36,7 +36,7 @@ pub async fn spawn_app() -> TestApp {
 
     let app = HttpServer::try_new(&conf).await.unwrap();
     let app_port = app.port();
-    tokio::spawn(app.serve());
+    tokio::spawn(app.run());
     TestApp {
         address: format!("http://localhost:{}", app_port),
         db_pool: conf.database.get_connection_pool(),

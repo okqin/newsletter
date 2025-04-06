@@ -7,6 +7,9 @@ use serde::Serialize;
 use thiserror::Error;
 use tracing::{instrument, warn};
 
+/// Result type specific to the HTTP API
+pub type Result<T, E = ApiError> = std::result::Result<T, E>;
+
 /// Custom error type for the API.
 /// The `#[from]` attribute allows for easy conversion from other error types.
 #[derive(Error, Debug)]

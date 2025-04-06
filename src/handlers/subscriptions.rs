@@ -10,8 +10,11 @@ use serde::Deserialize;
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
-use crate::http::{ApiError, AppState, DbPool, Result};
+use crate::{
+    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    error::{ApiError, Result},
+    router::{AppState, DbPool},
+};
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/subscriptions", post(subscribe))
