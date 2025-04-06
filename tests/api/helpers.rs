@@ -47,3 +47,15 @@ async fn configure_database(database: &DatabaseSettings) -> PgPool {
     database.migrate_database().await.unwrap();
     database.get_connection_pool()
 }
+
+impl TestApp {
+    pub async fn post_subscriptions(&self, body: &str) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("{}/subscriptions", self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body.to_string())
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+}

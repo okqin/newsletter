@@ -4,17 +4,10 @@ use crate::helpers::spawn_app;
 async fn subscribe_returns_200_valid_form_data() {
     // init
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
+    let body = "name=vic%20ji&email=vic_ji_i%40gmail.com";
 
     // execute
-    let body = "name=vic%20ji&email=vic_ji_i%40gmail.com";
-    let response = client
-        .post(format!("{}/subscriptions", app.address))
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .expect("Failed to execute request.");
+    let response = app.post_subscriptions(body).await;
 
     // assert
     assert_eq!(200, response.status().as_u16());
@@ -32,7 +25,6 @@ async fn subscribe_returns_200_valid_form_data() {
 async fn subscribe_returns_422_when_data_is_missing() {
     // init
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=vic%20ji", "missing the email"),
         ("email=vic_ji%40gmail.com", "missing the name"),
@@ -41,13 +33,7 @@ async fn subscribe_returns_422_when_data_is_missing() {
 
     for (invalid_body, error_message) in test_cases {
         // execute
-        let response = client
-            .post(format!("{}/subscriptions", app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+        let response = app.post_subscriptions(invalid_body).await;
 
         // assert
         assert_eq!(
@@ -63,7 +49,6 @@ async fn subscribe_returns_422_when_data_is_missing() {
 async fn subscribe_returns_400_when_fields_are_present_but_invalid() {
     // init
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=&email=vic_ji%40gmail.com", "name is empty"),
         ("name=vic%20ji&email=", "email is empty"),
@@ -72,13 +57,7 @@ async fn subscribe_returns_400_when_fields_are_present_but_invalid() {
 
     for (invalid_body, error_message) in test_cases {
         // execute
-        let response = client
-            .post(format!("{}/subscriptions", app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+        let response = app.post_subscriptions(invalid_body).await;
 
         // assert
         assert_eq!(
