@@ -41,7 +41,7 @@ async fn subscribe(State(state): State<AppState>, Form(data): Form<FormData>) ->
 #[instrument(skip_all)]
 async fn insert_subscriber(pool: &DbPool, new_subscriber: &NewSubscriber) -> Result<()> {
     sqlx::query!(
-        r#"INSERT INTO subscriptions (id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)"#,
+        r#"INSERT INTO subscriptions (id, email, name, subscribed_at, status) VALUES ($1, $2, $3, $4, 'confirmed')"#,
         Uuid::new_v4(),
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
