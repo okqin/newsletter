@@ -1,13 +1,18 @@
 use newsletter::{configuration::DatabaseSettings, HttpServer, Settings};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
+use wiremock::MockServer;
 
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
 }
 
 pub async fn spawn_app() -> TestApp {
+    // Start a mock email server
+    let email_server = MockServer::start().await;
+
     // Randomize configuration to ensure test isolation
     let conf = {
         let mut c = Settings::try_load().expect("Failed to read config");
@@ -15,6 +20,9 @@ pub async fn spawn_app() -> TestApp {
         c.server.port = 0;
         // Use a different database for each test case
         c.database.db_name = Uuid::new_v4().to_string();
+
+        // Use the mock email server
+        c.email_client.base_url = email_server.uri();
         c
     };
 
@@ -26,6 +34,7 @@ pub async fn spawn_app() -> TestApp {
     TestApp {
         address: format!("http://localhost:{}", app_port),
         db_pool,
+        email_server,
     }
 }
 

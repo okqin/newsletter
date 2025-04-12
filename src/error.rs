@@ -25,6 +25,10 @@ pub enum ApiError {
     /// Invalid value error.
     #[error("invalid value: {0}")]
     InvalidValue(String),
+
+    /// Converts from `reqwest::Error`.
+    #[error("a request error has occurred")]
+    Request(#[from] reqwest::Error),
 }
 
 // Provide detailed error messages as needed
@@ -40,7 +44,9 @@ impl ApiError {
     // Determine the appropriate status code.
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::Internal(_) | Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Internal(_) | Self::Database(_) | Self::Request(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             Self::InvalidValue(_) => StatusCode::BAD_REQUEST,
         }
     }
@@ -51,6 +57,7 @@ impl ApiError {
             Self::Internal(e) => format!("internal error: {}", e),
             Self::Database(e) => format!("database error: {}", e),
             Self::InvalidValue(e) => format!("invalid value: {}", e),
+            Self::Request(e) => format!("request error: {}", e),
         }
     }
 }
