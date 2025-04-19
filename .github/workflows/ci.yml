@@ -25,7 +25,6 @@ env:
   SQLX_FEATURES: "rustls,postgres"
   APP.DATABASE.USERNAME: postgres
   APP.DATABASE.PASSWORD: password
-  DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
 
 jobs:
   test:
