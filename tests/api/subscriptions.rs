@@ -1,4 +1,4 @@
-use crate::helpers::spawn_app;
+use crate::helpers::{get_confirmation_links, spawn_app};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -8,9 +8,9 @@ async fn subscribe_returns_200_valid_form_data() {
     let app = spawn_app().await;
     let body = "name=vic%20ji&email=vic_ji_i%40gmail.com";
 
-    // init mock server
-    Mock::given(method("POST"))
-        .and(path("/email"))
+    // setup mock server
+    Mock::given(path("/email"))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
         .await;
@@ -28,8 +28,8 @@ async fn subscribe_persists_the_new_subscriber() {
     let app = spawn_app().await;
     let body = "name=vic%20ji&email=vic_ji_i%40gmail.com";
 
-    Mock::given(method("POST"))
-        .and(path("/email"))
+    Mock::given(path("/email"))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
         .await;
@@ -102,9 +102,9 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
     let app = spawn_app().await;
     let body = "name=vic%20ji&email=vic_ji_i%40gmail.com";
 
-    // init mock server
-    Mock::given(method("POST"))
-        .and(path("/email"))
+    // setup mock server
+    Mock::given(path("/email"))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&app.email_server)
@@ -122,9 +122,9 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
     let app = spawn_app().await;
     let body = "name=vic%20ji&email=vic_ji_i%40gmail.com";
 
-    // init mock server
-    Mock::given(method("POST"))
-        .and(path("/email"))
+    // setup mock server
+    Mock::given(path("/email"))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&app.email_server)
         .await;
@@ -135,22 +135,9 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
     // assert
     // get the first request
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
+    // extract links from the body
+    let confirmation_links = get_confirmation_links(email_request, app.app_port);
 
-    // convert the request body to a json value
-    let email_body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
-
-    // Extract links from specified fields.
-    let get_link = |field: &str| {
-        let links: Vec<_> = linkify::LinkFinder::new()
-            .links(field)
-            .filter(|l| *l.kind() == linkify::LinkKind::Url)
-            .collect();
-        assert_eq!(links.len(), 1);
-        links[0].as_str().to_owned()
-    };
-
-    let html_link = get_link(email_body["HtmlBody"].as_str().unwrap());
-    let text_link = get_link(email_body["TextBody"].as_str().unwrap());
-
-    assert_eq!(html_link, text_link);
+    // two links should be the same.
+    assert_eq!(confirmation_links.html, confirmation_links.text);
 }

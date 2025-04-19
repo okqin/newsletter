@@ -4,7 +4,7 @@ use tower::ServiceBuilder;
 
 use crate::{
     email_client::EmailClient,
-    handlers::{health_check, subscriptions},
+    handlers::{health_check, subscriptions, subscriptions_confirm},
     middleware,
 };
 
@@ -17,6 +17,7 @@ pub type DbPool = sqlx::PgPool;
 pub(crate) struct AppState {
     pub db: DbPool,
     pub email_client: Arc<EmailClient>,
+    pub base_url: Arc<String>,
 }
 
 /// Builds the API router with all routes and middlewares
@@ -49,6 +50,7 @@ pub(crate) fn build_router(app_state: AppState) -> Router {
     Router::new()
         .merge(health_check::router())
         .merge(subscriptions::router())
+        .merge(subscriptions_confirm::router())
         .layer(middleware)
         .with_state(app_state)
 }

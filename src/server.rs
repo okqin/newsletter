@@ -84,6 +84,13 @@ fn build_app_state(conf: &Settings) -> AppState {
     // Wrap email client in Arc for thread-safe sharing
     let email_client = Arc::new(email_client);
 
+    // Get base URL from configuration
+    let base_url = Arc::new(conf.server.base_url.clone());
+
     // Return the application state with all components
-    AppState { db, email_client }
+    AppState {
+        db,
+        email_client,
+        base_url,
+    }
 }

@@ -1583,6 +1583,7 @@ dependencies = [
  "linkify",
  "once_cell",
  "proptest",
+ "rand 0.9.0",
  "reqwest",
  "secrecy",
  "serde",
