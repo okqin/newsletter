@@ -11,6 +11,9 @@ use crate::{
 /// Postgres database pool type
 pub type DbPool = sqlx::PgPool;
 
+/// Postgres database transaction type
+pub type DbTransaction<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
+
 /// Application state shared across all routes
 #[derive(Clone)]
 #[allow(dead_code)]

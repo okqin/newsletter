@@ -2,7 +2,7 @@ use crate::{
     domain::{NewSubscriber, SubscriberEmail, SubscriberName},
     email_client::EmailClient,
     error::{ApiError, Result},
-    router::{AppState, DbPool},
+    router::{AppState, DbTransaction},
 };
 use axum::{
     extract::State,
@@ -33,14 +33,21 @@ async fn subscribe(State(state): State<AppState>, Form(data): Form<FormData>) ->
         Ok(subscriber) => subscriber,
         Err(e) => return ApiError::InvalidValue(e).into_response(),
     };
-    let subscriber_id = match insert_subscriber(&state.db, &new_subscriber).await {
+    let mut transaction = match state.db.begin().await {
+        Ok(transaction) => transaction,
+        Err(e) => return ApiError::Database(e).into_response(),
+    };
+    let subscriber_id = match insert_subscriber(&mut transaction, &new_subscriber).await {
         Ok(subscriber_id) => subscriber_id,
         Err(e) => return e.into_response(),
     };
 
     let subscription_token = generate_subscription_token();
-    if let Err(e) = store_token(&state.db, subscriber_id, &subscription_token).await {
+    if let Err(e) = store_token(&mut transaction, subscriber_id, &subscription_token).await {
         return e.into_response();
+    }
+    if let Err(e) = transaction.commit().await {
+        return ApiError::Database(e).into_response();
     }
     if let Err(e) = send_confirmation_email(
         &state.email_client,
@@ -56,7 +63,10 @@ async fn subscribe(State(state): State<AppState>, Form(data): Form<FormData>) ->
 }
 
 #[instrument(skip_all)]
-async fn insert_subscriber(pool: &DbPool, new_subscriber: &NewSubscriber) -> Result<Uuid> {
+async fn insert_subscriber(
+    transaction: &mut DbTransaction<'_>,
+    new_subscriber: &NewSubscriber,
+) -> Result<Uuid> {
     let subscriber_id = Uuid::new_v4();
     sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, name, subscribed_at, status) VALUES ($1, $2, $3, $4, 'pending_confirmation')"#,
@@ -65,7 +75,7 @@ async fn insert_subscriber(pool: &DbPool, new_subscriber: &NewSubscriber) -> Res
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    .execute(pool)
+    .execute(&mut **transaction)
     .await?;
     Ok(subscriber_id)
 }
@@ -111,13 +121,17 @@ fn generate_subscription_token() -> String {
 }
 
 #[instrument(name = "Store subscription token in the database", skip_all)]
-async fn store_token(pool: &DbPool, subscriber_id: Uuid, subscription_token: &str) -> Result<()> {
+async fn store_token(
+    transaction: &mut DbTransaction<'_>,
+    subscriber_id: Uuid,
+    subscription_token: &str,
+) -> Result<()> {
     sqlx::query!(
         r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
         subscription_token,
         subscriber_id
     )
-    .execute(pool)
+    .execute(&mut **transaction)
     .await?;
     Ok(())
 }
