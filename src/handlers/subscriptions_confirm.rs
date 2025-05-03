@@ -26,8 +26,8 @@ struct Parameters {
 
 #[derive(thiserror::Error)]
 pub enum ConfirmationError {
-    #[error("Subscription token is invalid")]
-    InvalidToken,
+    #[error("There is no subscriber associated with the provided token.")]
+    UnknownToken,
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -42,7 +42,7 @@ impl IntoResponse for ConfirmationError {
     fn into_response(self) -> Response {
         // Determine the appropriate status code.
         let status_code = match self {
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
+            Self::UnknownToken => StatusCode::UNAUTHORIZED,
             Self::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
@@ -51,7 +51,7 @@ impl IntoResponse for ConfirmationError {
 
         // Log the error
         match self {
-            Self::InvalidToken => warn!("{:?}", self),
+            Self::UnknownToken => warn!("{:?}", self),
             Self::UnexpectedError(e) => error!("{:?}", e),
         }
 
@@ -64,18 +64,14 @@ async fn confirm(
     State(state): State<AppState>,
     parameters: Query<Parameters>,
 ) -> Result<StatusCode, ConfirmationError> {
-    let id = get_subscriber_id_from_token(&state.db, &parameters.subscription_token)
+    let subscriber_id = get_subscriber_id_from_token(&state.db, &parameters.subscription_token)
         .await
-        .context("Failed to get a subscriber id from subscription token")?;
-    match id {
-        None => Err(ConfirmationError::InvalidToken),
-        Some(subscriber_id) => {
-            confirm_subscriber(&state.db, subscriber_id)
-                .await
-                .context("Failed to confirm a subscriber")?;
-            Ok(StatusCode::OK)
-        }
-    }
+        .context("Failed to retrieve the subscriber id associated with the provided token.")?
+        .ok_or(ConfirmationError::UnknownToken)?;
+    confirm_subscriber(&state.db, subscriber_id)
+        .await
+        .context("Failed to update the subscriber status to `confirmed`.")?;
+    Ok(StatusCode::OK)
 }
 
 #[instrument(name = "Mark subscriber as confirmed", skip_all)]
