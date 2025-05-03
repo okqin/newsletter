@@ -79,9 +79,13 @@ impl TestApp {
             .expect("Failed to execute request")
     }
 
-    pub async fn get_subscriptions_confirm(&self, _token: Option<String>) -> reqwest::Response {
+    pub async fn get_subscriptions_confirm(&self, token: Option<&str>) -> reqwest::Response {
+        let query = match token {
+            Some(token) => format!("?subscription_token={}", token),
+            None => String::new(),
+        };
         self.http_client
-            .get(format!("{}/subscriptions/confirm", self.address))
+            .get(format!("{}/subscriptions/confirm{}", self.address, query))
             .send()
             .await
             .expect("Failed to execute request")

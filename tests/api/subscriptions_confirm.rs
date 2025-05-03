@@ -78,3 +78,13 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     assert_eq!(saved.name, "dhs doe");
     assert_eq!(saved.status, "confirmed");
 }
+
+#[tokio::test]
+async fn invalid_token_returns_401() {
+    // init
+    let app = spawn_app().await;
+    // execute
+    let response = app.get_subscriptions_confirm(Some("invalid_token")).await;
+    // assert
+    assert_eq!(response.status().as_u16(), 401);
+}

@@ -14,6 +14,20 @@ pub type DbPool = sqlx::PgPool;
 /// Postgres database transaction type
 pub type DbTransaction<'a> = sqlx::Transaction<'a, sqlx::Postgres>;
 
+/// Error response body structure
+#[derive(serde::Serialize)]
+pub struct ErrorResponse {
+    code: u16,
+    message: String,
+}
+
+impl ErrorResponse {
+    /// Creates a new error response body
+    pub fn new(code: u16, message: String) -> Self {
+        Self { code, message }
+    }
+}
+
 /// Application state shared across all routes
 #[derive(Clone)]
 #[allow(dead_code)]

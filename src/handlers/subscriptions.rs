@@ -1,20 +1,21 @@
 use crate::{
     domain::{NewSubscriber, SubscriberEmail, SubscriberName},
     email_client::EmailClient,
-    error::{ApiError, Result},
-    router::{AppState, DbTransaction},
+    router::{AppState, DbTransaction, ErrorResponse},
+    utils::error_chain_fmt,
 };
+use anyhow::Context;
 use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::post,
-    Form, Router,
+    Form, Json, Router,
 };
 use chrono::Utc;
 use rand::{distr::Alphanumeric, rng, Rng};
 use serde::Deserialize;
-use tracing::instrument;
+use tracing::{error, instrument, warn};
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
@@ -27,46 +28,91 @@ struct FormData {
     name: String,
 }
 
-#[instrument(skip_all, fields(subscriber_email = data.email, subscriber_name = data.name))]
-async fn subscribe(State(state): State<AppState>, Form(data): Form<FormData>) -> Response {
-    let new_subscriber = match data.try_into() {
-        Ok(subscriber) => subscriber,
-        Err(e) => return ApiError::InvalidValue(e).into_response(),
-    };
-    let mut transaction = match state.db.begin().await {
-        Ok(transaction) => transaction,
-        Err(e) => return ApiError::Database(e).into_response(),
-    };
-    let subscriber_id = match insert_subscriber(&mut transaction, &new_subscriber).await {
-        Ok(subscriber_id) => subscriber_id,
-        Err(e) => return e.into_response(),
-    };
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
 
+    fn try_from(value: FormData) -> Result<Self, String> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(NewSubscriber { email, name })
+    }
+}
+
+#[derive(thiserror::Error)]
+pub enum SubscribeError {
+    #[error("{0}")]
+    ValidationError(String),
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+}
+
+impl std::fmt::Debug for SubscribeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
+impl IntoResponse for SubscribeError {
+    #[instrument(skip_all)]
+    fn into_response(self) -> Response {
+        // Determine the appropriate status code.
+        let status_code = match self {
+            Self::ValidationError(_) => StatusCode::BAD_REQUEST,
+            Self::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        // Create the error response body
+        let body = ErrorResponse::new(status_code.as_u16(), self.to_string());
+
+        // Log the error
+        match self {
+            Self::ValidationError(e) => warn!("{:?}", e),
+            Self::UnexpectedError(e) => error!("{:?}", e),
+        }
+
+        (status_code, Json(body)).into_response()
+    }
+}
+
+#[instrument(name = "Add a new subscriber" , skip_all, fields(subscriber_email = data.email, subscriber_name = data.name))]
+async fn subscribe(
+    State(state): State<AppState>,
+    Form(data): Form<FormData>,
+) -> Result<StatusCode, SubscribeError> {
+    let new_subscriber = data.try_into().map_err(SubscribeError::ValidationError)?;
+
+    let mut transaction = state
+        .db
+        .begin()
+        .await
+        .context("Failed to acquire a Postgres connection from the pool.")?;
+    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
+        .await
+        .context("Failed to insert new subscriber in the database.")?;
     let subscription_token = generate_subscription_token();
-    if let Err(e) = store_token(&mut transaction, subscriber_id, &subscription_token).await {
-        return e.into_response();
-    }
-    if let Err(e) = transaction.commit().await {
-        return ApiError::Database(e).into_response();
-    }
-    if let Err(e) = send_confirmation_email(
+    store_token(&mut transaction, subscriber_id, &subscription_token)
+        .await
+        .context("Failed to store the confirmation token for a new subscriber.")?;
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit SQL transaction to store a new subscriber.")?;
+    send_confirmation_email(
         &state.email_client,
         new_subscriber,
         &state.base_url,
         &subscription_token,
     )
     .await
-    {
-        return e.into_response();
-    }
-    StatusCode::OK.into_response()
+    .context("Failed to send a confirmation email.")?;
+    Ok(StatusCode::OK)
 }
 
-#[instrument(skip_all)]
+#[instrument(name = "Save new subscriber details in the database", skip_all)]
 async fn insert_subscriber(
     transaction: &mut DbTransaction<'_>,
     new_subscriber: &NewSubscriber,
-) -> Result<Uuid> {
+) -> Result<Uuid, sqlx::Error> {
     let subscriber_id = Uuid::new_v4();
     sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, name, subscribed_at, status) VALUES ($1, $2, $3, $4, 'pending_confirmation')"#,
@@ -86,7 +132,7 @@ async fn send_confirmation_email(
     new_subscriber: NewSubscriber,
     base_url: &str,
     subscription_token: &str,
-) -> Result<()> {
+) -> Result<(), reqwest::Error> {
     let confirmation_link = format!(
         "{}/subscriptions/confirm?subscription_token={}",
         base_url, subscription_token
@@ -125,7 +171,7 @@ async fn store_token(
     transaction: &mut DbTransaction<'_>,
     subscriber_id: Uuid,
     subscription_token: &str,
-) -> Result<()> {
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
         subscription_token,
@@ -134,14 +180,4 @@ async fn store_token(
     .execute(&mut **transaction)
     .await?;
     Ok(())
-}
-
-impl TryFrom<FormData> for NewSubscriber {
-    type Error = String;
-
-    fn try_from(value: FormData) -> Result<Self, String> {
-        let name = SubscriberName::parse(value.name)?;
-        let email = SubscriberEmail::parse(value.email)?;
-        Ok(NewSubscriber { email, name })
-    }
 }
