@@ -3,3 +3,4 @@
 .script/
 /config/local.toml
 /config/production.toml
+http.rest
