@@ -4,7 +4,7 @@ use tower::ServiceBuilder;
 
 use crate::{
     email_client::EmailClient,
-    handlers::{health_check, subscriptions, subscriptions_confirm},
+    handlers::{health_check, newsletters, subscriptions, subscriptions_confirm},
     middleware,
 };
 
@@ -68,6 +68,7 @@ pub(crate) fn build_router(app_state: AppState) -> Router {
         .merge(health_check::router())
         .merge(subscriptions::router())
         .merge(subscriptions_confirm::router())
+        .merge(newsletters::router())
         .layer(middleware)
         .with_state(app_state)
 }
