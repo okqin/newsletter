@@ -60,7 +60,7 @@ impl IntoResponse for ConfirmationError {
 }
 
 #[instrument(name = "Confirm a pending subscriber", skip_all)]
-async fn confirm(
+pub async fn confirm(
     State(state): State<AppState>,
     parameters: Query<Parameters>,
 ) -> Result<StatusCode, ConfirmationError> {

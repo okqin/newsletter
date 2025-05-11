@@ -6,6 +6,6 @@ pub fn router() -> Router<AppState> {
     Router::new().route("/health_check", get(health_check))
 }
 
-async fn health_check() -> StatusCode {
+pub async fn health_check() -> StatusCode {
     StatusCode::OK
 }

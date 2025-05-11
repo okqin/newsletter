@@ -75,7 +75,7 @@ impl IntoResponse for SubscribeError {
 }
 
 #[instrument(name = "Add a new subscriber" , skip_all, fields(subscriber_email = data.email, subscriber_name = data.name))]
-async fn subscribe(
+pub async fn subscribe(
     State(state): State<AppState>,
     Form(data): Form<FormData>,
 ) -> Result<StatusCode, SubscribeError> {
