@@ -76,7 +76,7 @@ impl TestApp {
             .body(body.to_string())
             .send()
             .await
-            .expect("Failed to execute request")
+            .expect("Failed to execute request.")
     }
 
     pub async fn get_subscriptions_confirm(&self, token: Option<&str>) -> reqwest::Response {
@@ -88,7 +88,16 @@ impl TestApp {
             .get(format!("{}/subscriptions/confirm{}", self.address, query))
             .send()
             .await
-            .expect("Failed to execute request")
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn post_newsletters(&self, body: &serde_json::Value) -> reqwest::Response {
+        self.http_client
+            .post(format!("{}/newsletters", self.address))
+            .json(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
     }
 }
 
